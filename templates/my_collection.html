@@ -8,6 +8,35 @@
 <body>
   <div class="container">
     <h2>My Collection</h2>
+
+    <!-- Search Form -->
+    <form method="GET" action="{{ url_for('my_collection') }}">
+      <label for="question_name">Question Name:</label>
+      <input type="text" id="question_name" name="question_name" value="{{ request.args.get('question_name', '') }}">
+
+      <label for="industry">Industry:</label>
+      <input type="text" id="industry" name="industry" value="{{ request.args.get('industry', '') }}">
+
+      <label for="role">Type of Role:</label>
+      <input type="text" id="role" name="role" value="{{ request.args.get('role', '') }}">
+
+      <label for="difficulty">Difficulty:</label>
+      <select id="difficulty" name="difficulty">
+        <option value="">All</option>
+        <option value="Easy" {% if request.args.get('difficulty') == 'Easy' %}selected{% endif %}>Easy</option>
+        <option value="Medium" {% if request.args.get('difficulty') == 'Medium' %}selected{% endif %}>Medium</option>
+        <option value="Hard" {% if request.args.get('difficulty') == 'Hard' %}selected{% endif %}>Hard</option>
+      </select>
+
+      <label for="collected_time">Collected Time:</label>
+      <input type="date" id="collected_time" name="collected_time" value="{{ request.args.get('collected_time', '') }}">
+
+      <button type="submit">Search</button>
+    </form>
+
+    <br>
+
+    <!-- Collection Table -->
     {% if collections %}
       <table>
         <thead>
@@ -40,8 +69,9 @@
         </tbody>
       </table>
     {% else %}
-      <p>No questions in your collection.</p>
+      <p>No matching questions found.</p>
     {% endif %}
+
     <br>
     <a href="{{ url_for('interview') }}">Back to Interview</a>
   </div>

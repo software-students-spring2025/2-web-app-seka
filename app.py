@@ -13,6 +13,8 @@ from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 from bson.objectid import ObjectId
 from datetime import datetime
+from flask import session
+
 
 # Load environment variables from .env
 load_dotenv()
@@ -25,7 +27,7 @@ client = MongoClient(os.environ.get("MONGO_URI"))
 db = client.get_database("jobtracker")
 users_collection = db.get_collection("users")
 applications_collection = db.get_collection("applications")
-# 用于保存面试收藏题目的集合
+
 interview_collection = db.get_collection("interview_collection")
 
 # Set up Flask-Login
@@ -33,7 +35,6 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
-# 示例 Practice 与 Mock 题目数据（共3道题）
 practice_questions = [
     {"difficulty": "Easy", "question_content": "Practice Question 1: ?????"},
     {"difficulty": "Medium", "question_content": "Practice Question 2: ?????"},
@@ -67,21 +68,24 @@ def load_user(user_id):
 def index():
     return redirect(url_for("login"))
 
-# 登录
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         email = request.form.get("email")
         password = request.form.get("password")
         user_data = users_collection.find_one({"email": email})
+
         if user_data and check_password_hash(user_data["password"], password):
             user_obj = User(user_data)
             login_user(user_obj)
             flash("Logged in successfully", "success")
-            return redirect(url_for("home"))
+            return redirect(url_for("home"))  # Redirect clears the flash message
+
         else:
             flash("Invalid email or password", "danger")
-    return render_template("login.html")
+    
+    return render_template("login.html")  # Flash messages only shown after submission
+
 
 # 注册
 @app.route("/signup", methods=["GET", "POST"])
@@ -107,11 +111,26 @@ def signup():
         return redirect(url_for("home"))
     return render_template("signup.html")
 
-# Home 页面
-@app.route("/home")
+
+# Home screen (protected route)
+@app.route("/home", methods=["GET"])
 @login_required
 def home():
-    applications = list(applications_collection.find({"user_id": current_user.id}))
+    search_query = request.args.get("search", "").strip()
+
+    if search_query:
+        applications = list(applications_collection.find({
+            "$and": [
+                {"user_id": current_user.id},
+                {"$or": [
+                    {"company": {"$regex": search_query, "$options": "i"}},
+                    {"job_title": {"$regex": search_query, "$options": "i"}}
+                ]}
+            ]
+        }))
+    else:
+        applications = list(applications_collection.find({"user_id": current_user.id}))
+        
     total_apps = len(applications)
     interview_count = sum(1 for app in applications if app.get("status") == "Interview")
     offer_count = sum(1 for app in applications if app.get("status") == "Offered")
@@ -157,9 +176,70 @@ def logout():
     flash("Logged out successfully", "success")
     return redirect(url_for("login"))
 
-# ================= Interview 模块 ==================
 
-# Interview 主页面
+@app.route("/delete_application/<application_id>", methods=["GET"])
+@login_required
+def delete_application(application_id):
+    applications_collection.delete_one({"_id": ObjectId(application_id)})
+    flash("Application deleted successfully!", "success")
+    return redirect(url_for("home"))
+
+@app.route("/edit_application/<application_id>", methods=["GET", "POST"])
+@login_required
+def edit_application(application_id):
+    application = applications_collection.find_one({"_id": ObjectId(application_id)})
+
+    if request.method == "POST":
+        company = request.form.get("company")
+        job_title = request.form.get("job_title")
+        status = request.form.get("status")
+        application_date = request.form.get("application_date")
+        note = request.form.get("note")
+
+        applications_collection.update_one(
+            {"_id": ObjectId(application_id)},
+            {"$set": {
+                "company": company,
+                "job_title": job_title,
+                "status": status,
+                "application_date": application_date,
+                "note": note
+            }}
+        )
+        flash("Application updated successfully!", "success")
+        return redirect(url_for("home"))
+
+    return render_template("edit_application.html", application=application)
+@app.route("/search_application", methods=["GET", "POST"])
+@login_required
+def search_application():
+    if request.method == "POST":
+        company = request.form.get("company")
+        job_title = request.form.get("job_title")
+        status = request.form.get("status")
+        application_date = request.form.get("application_date")
+        note = request.form.get("note")
+
+        # Build search query
+        query = {"user_id": current_user.id}
+        if company:
+            query["company"] = {"$regex": company, "$options": "i"}
+        if job_title:
+            query["job_title"] = {"$regex": job_title, "$options": "i"}
+        if status:
+            query["status"] = {"$regex": status, "$options": "i"}
+        if application_date:
+            query["application_date"] = application_date
+        if note:
+            query["note"] = {"$regex": note, "$options": "i"}
+
+        # Perform search in MongoDB
+        search_results = list(applications_collection.find(query))
+
+        return render_template("search_results.html", results=search_results)
+
+    return render_template("search_application.html")
+
 @app.route("/interview")
 @login_required
 def interview():
@@ -275,7 +355,65 @@ def result():
     correct_rate = request.args.get("correct_rate", 0)
     return render_template("result.html", correct_rate=correct_rate)
 
-# 我的收藏页面（删除功能保持不变）
+@app.route("/interview/my_collection", methods=["GET"])
+@login_required
+def my_collection():
+    # Retrieve search parameters from the request
+    question_name = request.args.get("question_name", "").strip()
+    industry = request.args.get("industry", "").strip()
+    role = request.args.get("role", "").strip()
+    difficulty = request.args.get("difficulty", "").strip()
+    collected_time = request.args.get("collected_time", "").strip()
+
+    # Base query: Filter by user_id
+    query = {"user_id": current_user.id}
+
+    # Apply filters if user provides input
+    if question_name:
+        query["question_name"] = {"$regex": question_name, "$options": "i"}  # Case-insensitive
+    if industry:
+        query["industry"] = {"$regex": industry, "$options": "i"}
+    if role:
+        query["role"] = {"$regex": role, "$options": "i"}
+    if difficulty:
+        query["difficulty"] = difficulty  # Exact match for dropdown selection
+    if collected_time:
+        query["collected_time"] = {"$regex": collected_time, "$options": "i"}  # Date search
+
+    # Query the MongoDB collection
+    collections = list(interview_collection.find(query))
+
+    return render_template("my_collection.html", collections=collections)
+
+
+@app.route("/interview/my_collection/<collection_id>", methods=["GET", "POST"])
+@login_required
+def collection_question(collection_id):
+    collection_item = interview_collection.find_one({"_id": ObjectId(collection_id)})
+
+    if not collection_item:
+        flash("Question not found", "danger")
+        return redirect(url_for("my_collection"))
+
+    if request.method == "POST":
+        revised_answer = request.form.get("user_answer")
+        
+        interview_collection.update_one(
+            {"_id": ObjectId(collection_id)},
+            {"$set": {"user_answer": revised_answer}}
+        )
+        
+        flash("Your answer has been updated!", "success")
+        return redirect(url_for("collection_question", collection_id=collection_id))
+
+    return render_template("collection_question.html",
+                           difficulty=collection_item.get("difficulty"),
+                           question_content=collection_item.get("question_content"),
+                           correct_answer=collection_item.get("correct_answer", ""),
+                           user_answer=collection_item.get("user_answer", ""))
+
+
+=======
 @app.route("/interview/my_collection")
 @login_required
 def my_collection():
@@ -296,6 +434,7 @@ def collection_question(collection_id):
                            correct_answer=collection_item.get("correct_answer", ""),
                            user_answer=collection_item.get("user_answer", ""))
 
+
 # 删除收藏题目
 @app.route("/interview/delete_collection/<collection_id>")
 @login_required
@@ -304,7 +443,7 @@ def delete_collection(collection_id):
     flash("Question deleted from your collection", "success")
     return redirect(url_for("my_collection"))
 
-# ===================================================
+
 
 if __name__ == "__main__":
     app.run(debug=True)
