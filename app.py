@@ -414,25 +414,6 @@ def collection_question(collection_id):
 
 
 
-@app.route("/interview/my_collection")
-@login_required
-def my_collection():
-    collections = list(interview_collection.find({"user_id": current_user.id}))
-    return render_template("my_collection.html", collections=collections)
-
-# 收藏题目的详情页面（只读模式，显示正确答案和用户提交答案）
-@app.route("/interview/my_collection/<collection_id>")
-@login_required
-def collection_question(collection_id):
-    collection_item = interview_collection.find_one({"_id": ObjectId(collection_id)})
-    if not collection_item:
-        flash("Question not found", "danger")
-        return redirect(url_for("my_collection"))
-    return render_template("collection_question.html", 
-                           difficulty=collection_item.get("difficulty", "Unknown"),
-                           question_content=collection_item.get("question_content", "????"),
-                           correct_answer=collection_item.get("correct_answer", ""),
-                           user_answer=collection_item.get("user_answer", ""))
 
 
 # 删除收藏题目
