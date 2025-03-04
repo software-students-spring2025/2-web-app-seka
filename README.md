@@ -8,16 +8,27 @@ Provide a simple platform where job seekers can record their applications, pract
 ## User stories
 
 As a job seeker, I want to create new job application records so that I can manage them.
+
 As a job seeker, I want to update or delete job application records so that I can keep them accurate.
+
 As a user, I want to view all my job applications in one list so that I can know the overall progress.
+
 As a user, I want to practice mock interview questions so that I can have a better performance later in real interview.
+
 As a user, I want to see scores on my practice sessions so I can track my improvement.
+
 As a user, I want to document questions to a personal collection so that I can revisit them.
+
 As a user, I want to remove questions in my collection so that I can keep the relevance of them.
+
 As a user, I want to create an account so that I can save my personal progress and match it with my account.
+
 As a user, I want to log in and log out so that only me can view my job status.
+
 As a user, I want to reset my password so that I wont be worried about losing my pwd.
+
 As a user, I want to add personal notes to each job application so I can set reminder for key details.
+
 As a user, I want to update answers to questions in my collection so I can revise the answer to make it better. 
 
 
@@ -35,4 +46,4 @@ open a web browser and go to http://localhost:5000 (or change 5000 to whatever p
 
 ## Task boards
 
-See instructions. Delete this line and place a link to the task boards here.
+[Link](https://github.com/orgs/software-students-spring2025/projects/82)
