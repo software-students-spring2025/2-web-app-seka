@@ -413,7 +413,7 @@ def collection_question(collection_id):
                            user_answer=collection_item.get("user_answer", ""))
 
 
-=======
+
 @app.route("/interview/my_collection")
 @login_required
 def my_collection():
