@@ -35,4 +35,4 @@ open a web browser and go to http://localhost:5000 (or change 5000 to whatever p
 
 ## Task boards
 
-See instructions. Delete this line and place a link to the task boards here.
+[Link](https://github.com/orgs/software-students-spring2025/projects/82)
