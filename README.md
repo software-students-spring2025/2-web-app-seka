@@ -2,6 +2,10 @@
 
 A little exercise to build a web application following an agile development process. See the [instructions](instructions.md) for more detail.
 
+## Extension
+
+Our team would like to use one extension for this assignment.
+
 ## Product vision statement
 Provide a simple platform where job seekers can record their applications, practice mock interviews, and manage a collection of interview questions.
 
